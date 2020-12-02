@@ -9,13 +9,11 @@ struct d {
 using ll = int64_t;
 using input_t = std::vector<std::pair<d, std::string>>;
 
-input_t read_input(std::string const& file_path) {
+input_t read_input() {
     input_t input_values;
 
-    std::ifstream infile(file_path);
-
     std::string line;
-    while (std::getline(infile, line)) {
+    while (std::getline(std::cin, line)) {
         std::istringstream iss(line);
         int a;
         int b;
@@ -46,7 +44,7 @@ ll solve2(input_t const& input_data) {
 }
 
 int main() {
-    auto const input_data = read_input("input");
+    auto const input_data = read_input();
     // std::for_each(std::cbegin(input_values), std::cend(input_values), [](auto const& elem){ std::cout << elem << ",
     // "; }); std::cout << std::endl;
 
