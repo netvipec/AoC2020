@@ -1,17 +1,15 @@
 #include <bits/stdc++.h>
 
 using ll = int64_t;
-using input_t = std::vector<int>;
+using input_t = std::vector<ll>;
 
-input_t read_input(std::string const& file_path) {
+input_t read_input() {
     input_t input_values;
 
-    std::ifstream infile(file_path);
-
     std::string line;
-    while (std::getline(infile, line)) {
+    while (std::getline(std::cin, line)) {
         std::istringstream iss(line);
-        int a;
+        ll a;
         if (!(iss >> a)) {
             break;
         } // error
@@ -30,7 +28,7 @@ ll solve2(input_t const& input_data) {
 }
 
 int main() {
-    auto const input_data = read_input("input");
+    auto const input_data = read_input();
     // std::for_each(std::cbegin(input_values), std::cend(input_values), [](auto const& elem){ std::cout << elem << ", "; });
     // std::cout << std::endl;
 
