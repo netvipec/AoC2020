@@ -41,7 +41,7 @@ ll solve1(input_t const& input_data) {
 
 ll solve2(input_t const& input_data) {
     return std::count_if(std::cbegin(input_data), std::cend(input_data), [](auto const& p) {
-        return p.second[p.first.l_min - 1] == p.first.letter ^ p.second[p.first.l_max - 1] == p.first.letter;
+        return (p.second[p.first.l_min - 1] == p.first.letter) ^ (p.second[p.first.l_max - 1] == p.first.letter);
     });
 }
 
