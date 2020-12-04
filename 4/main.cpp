@@ -75,23 +75,14 @@ ll solve1(input_t const& input_data) {
 }
 
 bool byr_check(std::string const& d) {
-    if (d.size() != 4) {
-        return false;
-    }
     auto const n = std::stoi(d);
     return 1920 <= n && n <= 2002;
 }
 bool iyr_check(std::string const& d) {
-    if (d.size() != 4) {
-        return false;
-    }
     auto const n = std::stoi(d);
     return 2010 <= n && n <= 2020;
 }
 bool eyr_check(std::string const& d) {
-    if (d.size() != 4) {
-        return false;
-    }
     auto const n = std::stoi(d);
     return 2020 <= n && n <= 2030;
 }
