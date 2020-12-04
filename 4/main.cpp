@@ -56,6 +56,7 @@ input_t read_input() {
             p.insert(make_pair(b[0], b[1]));
         }
     }
+    input_values.push_back(p);
     return input_values;
 }
 
@@ -154,6 +155,9 @@ ll solve2(input_t const& input_data) {
 
 int main() {
     auto const input_data = read_input();
+    // std::for_each(std::cbegin(input_data.back()), std::cend(input_data.back()), [](auto const& elem) {
+    //     std::cout << elem.first << ", " << elem.second << std::endl;
+    // });
 
     auto const s1 = solve1(input_data);
     std::cout << "Solution Part1: " << s1 << std::endl;
