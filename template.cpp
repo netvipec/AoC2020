@@ -2,6 +2,7 @@
 
 using ll = int64_t;
 using input_t = std::vector<ll>;
+using result_t = ll;
 
 input_t read_input() {
     input_t input_values;
@@ -19,17 +20,15 @@ input_t read_input() {
     return input_values;
 }
 
-ll solve1(input_t const& input_data) {
-    return -1;
-}
+result_t solve1(input_t const& input_data) { return -1; }
 
-ll solve2(input_t const& input_data) {
-    return -1;
-}
+result_t solve2(input_t const& input_data) { return -1; }
 
 int main() {
     auto const input_data = read_input();
-    // std::for_each(std::cbegin(input_values), std::cend(input_values), [](auto const& elem){ std::cout << elem << ", "; });
+    // std::for_each(std::cbegin(input_data), std::cend(input_data), [](auto const& elem) {
+    //     std::cout << elem << ", ";
+    // });
     // std::cout << std::endl;
 
     auto const s1 = solve1(input_data);
