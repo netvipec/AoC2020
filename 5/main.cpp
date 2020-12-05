@@ -15,21 +15,14 @@ input_t read_input() {
 }
 
 ll get_seat_id(std::string const& boarding_pass) {
-    ll power2 = 1 << 6;
-    ll row = 0;
-    for (size_t i = 0; i < 7; i++, power2 >>= 1) {
-        row |= (boarding_pass[i] == 'B') ? power2 : 0;
-        // std::cout << row << std::endl;
+    ll power2 = 1 << 9;
+    ll seat_id = 0;
+    for (size_t i = 0; i < 10; i++, power2 >>= 1) {
+        seat_id |= (boarding_pass[i] == 'B') ? power2 : 0;
+        seat_id |= (boarding_pass[i] == 'R') ? power2 : 0;
     }
 
-    power2 = 1 << 2;
-    ll col = 0;
-    for (size_t i = 0; i < 3; i++, power2 >>= 1) {
-        col |= (boarding_pass[7 + i] == 'R') ? power2 : 0;
-        // std::cout << col << std::endl;
-    }
-
-    return row * 8 + col;
+    return seat_id;
 }
 
 std::vector<ll> get_boarding_pass(input_t const& input_data) {
