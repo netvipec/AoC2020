@@ -15,9 +15,9 @@ input_t read_input() {
 }
 
 ll get_seat_id(std::string const& boarding_pass) {
-    ll power2 = 1 << 9;
+    ll power2 = 1 << (boarding_pass.size() - 1);
     ll seat_id = 0;
-    for (size_t i = 0; i < 10; i++, power2 >>= 1) {
+    for (size_t i = 0; i < boarding_pass.size(); i++, power2 >>= 1) {
         seat_id |= (boarding_pass[i] == 'B') ? power2 : 0;
         seat_id |= (boarding_pass[i] == 'R') ? power2 : 0;
     }
