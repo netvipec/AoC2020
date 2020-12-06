@@ -20,9 +20,15 @@ input_t read_input() {
     return input_values;
 }
 
-result_t solve1(input_t const& input_data) { return -1; }
+result_t solve1(input_t const& input_data) {
+    // TODO: insert code
+    return -1;
+}
 
-result_t solve2(input_t const& input_data) { return -1; }
+result_t solve2(input_t const& input_data) {
+    // TODO: insert code
+    return -1;
+}
 
 int main() {
     auto const input_data = read_input();
