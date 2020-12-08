@@ -31,12 +31,9 @@ std::pair<ll, bool> run(input_t const& input_data) {
     ll instruction_pointer = 0;
     ll accumulator = 0;
     for (; instruction_pointer < static_cast<int>(input_data.size());) {
-        auto const it = executed_instruction_pointers.find(instruction_pointer);
-        if (it != std::cend(executed_instruction_pointers)) {
+        if (!executed_instruction_pointers.insert(instruction_pointer).second) {
             break;
         }
-
-        executed_instruction_pointers.insert(instruction_pointer);
 
         auto const& instruction = input_data[instruction_pointer];
 
