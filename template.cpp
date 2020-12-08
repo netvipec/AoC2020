@@ -4,6 +4,16 @@ using ll = int64_t;
 using input_t = std::vector<ll>;
 using result_t = ll;
 
+static std::vector<std::string> split(std::string const& s, char delim) {
+    std::stringstream ss(s);
+    std::string item;
+    std::vector<std::string> elems;
+    while (std::getline(ss, item, delim)) {
+        elems.push_back(item);
+    }
+    return elems;
+}
+
 input_t read_input() {
     input_t input_values;
 
@@ -15,19 +25,21 @@ input_t read_input() {
             break;
         } // error
 
-        input_values.push_back(a);
+        input_values.emplace_back(a);
     }
     return input_values;
 }
 
 result_t solve1(input_t const& input_data) {
+    result_t ans = -1;
     // TODO: insert code
-    return -1;
+    return ans;
 }
 
 result_t solve2(input_t const& input_data) {
+    result_t ans = -1;
     // TODO: insert code
-    return -1;
+    return ans;
 }
 
 int main() {
