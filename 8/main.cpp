@@ -26,68 +26,42 @@ input_t read_input() {
     return input_values;
 }
 
-result_t solve1(input_t const& input_data) {
-    std::set<ll> inst_id;
-    ll ip = 0;
-    ll acc = 0;
-    for (;;) {
-        auto const it = inst_id.find(ip);
-        if (it != std::cend(inst_id)) {
-            break;
-        }
-
-        inst_id.insert(ip);
-
-        if (input_data[ip].first == "acc") {
-            acc += input_data[ip].second;
-        } else if (input_data[ip].first == "jmp") {
-            ip += input_data[ip].second;
-            continue;
-        }
-
-        ip++;
-    }
-
-    return acc;
-}
-
 std::pair<ll, bool> run(input_t const& input_data) {
-    std::set<ll> inst_id;
-    ll ip = 0;
-    ll acc = 0;
-    bool finilize = false;
-    for (; ip < input_data.size();) {
-        auto const it = inst_id.find(ip);
-        if (it != std::cend(inst_id)) {
+    std::unordered_set<ll> executed_instruction_pointers;
+    ll instruction_pointer = 0;
+    ll accumulator = 0;
+    for (; instruction_pointer < static_cast<int>(input_data.size());) {
+        auto const it = executed_instruction_pointers.find(instruction_pointer);
+        if (it != std::cend(executed_instruction_pointers)) {
             break;
         }
 
-        inst_id.insert(ip);
+        executed_instruction_pointers.insert(instruction_pointer);
 
-        if (input_data[ip].first == "acc") {
-            acc += input_data[ip].second;
-        } else if (input_data[ip].first == "jmp") {
-            ip += input_data[ip].second;
+        auto const& instruction = input_data[instruction_pointer];
+
+        if (instruction.first == "acc") {
+            accumulator += instruction.second;
+        } else if (instruction.first == "jmp") {
+            instruction_pointer += instruction.second;
             continue;
         }
 
-        ip++;
+        instruction_pointer++;
     }
 
-    return std::make_pair(acc, ip == input_data.size());
+    return std::make_pair(accumulator, instruction_pointer == static_cast<int>(input_data.size()));
 }
+
+result_t solve1(input_t const& input_data) { return run(input_data).first; }
 
 result_t solve2(input_t const& input_data) {
+    auto id = input_data;
     for (size_t i = 0; i < input_data.size(); i++) {
         if (input_data[i].first == "jmp" || input_data[i].first == "nop") {
-            auto id = input_data;
-            if (input_data[i].first == "jmp") {
-                id[i].first = "nop";
-            } else {
-                id[i].first = "jmp";
-            }
-
+            id[i].first = (input_data[i].first == "jmp") ? "nop" : "jmp";
             auto const res = run(id);
+            id[i] = input_data[i];
             if (res.second) {
                 return res.first;
             }
