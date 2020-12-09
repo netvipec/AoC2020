@@ -43,17 +43,30 @@ result_t solve2(input_t const& input_data) {
 }
 
 int main() {
+    auto begin_input = std::chrono::steady_clock::now();
     auto const input_data = read_input();
+    auto end_input = std::chrono::steady_clock::now();
     // std::for_each(std::cbegin(input_data), std::cend(input_data), [](auto const& elem) {
     //     std::cout << elem << ", ";
     // });
     // std::cout << std::endl;
+    std::cout << "Read Input Time = "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(end_input - begin_input).count() << "[ms]"
+              << std::endl;
 
+    auto begin_s1 = std::chrono::steady_clock::now();
     auto const s1 = solve1(input_data);
-    std::cout << "Solution Part1: " << s1 << std::endl;
+    auto end_s1 = std::chrono::steady_clock::now();
+    std::cout << "Solution Part1: " << s1
+              << "   -> Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_s1 - begin_s1).count()
+              << "[ms]" << std::endl;
 
+    auto begin_s2 = std::chrono::steady_clock::now();
     auto const s2 = solve2(input_data);
-    std::cout << "Solution Part2: " << s2 << std::endl;
+    auto end_s2 = std::chrono::steady_clock::now();
+    std::cout << "Solution Part2: " << s2
+              << "   -> Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_s2 - begin_s2).count()
+              << "[ms]" << std::endl;
 
     return 0;
 }
