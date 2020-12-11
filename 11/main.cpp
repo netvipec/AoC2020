@@ -29,6 +29,10 @@ void evolve(input_t const& seat_layout,
             ll adjacent_occupied_min = 4) {
     for (ll i = 0, i_end = static_cast<ll>(seat_layout.size()); i < i_end; i++) {
         for (ll j = 0, j_end = static_cast<ll>(seat_layout[i].size()); j < j_end; j++) {
+            if (seat_layout[i][j] == '.') {
+                next_seat_layout[i][j] = '.';
+                continue;
+            }
             ll adjacent_occupied = std::count_if(std::cbegin(D), std::cend(D), [&](auto const& dd) {
                 for (ll c = 1;; c++) {
                     auto const in = i + c * dd.first;
