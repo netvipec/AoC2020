@@ -1,6 +1,7 @@
+#include "BigInteger.hpp"
+
 #include <bits/stdc++.h>
 
-using ll = int64_t;
 using input_t = std::pair<ll, std::map<ll, ll>>;
 using result_t = ll;
 
@@ -113,12 +114,16 @@ ll CRT(std::vector<ll> const& a, std::vector<ll> const& n) {
 
     ll x = 0;
     for (size_t i = 0; i < n.size(); ++i) {
+#if 0
+        x += (ll)((Int(a[i]) * Int(n_comp[i]) * Int(M[i])) % N);
+#else
         __int128_t ai(a[i]);
         ai *= n_comp[i];
         ai %= N;
         ai *= M[i];
         ai %= N;
         x += ai;
+#endif
         x %= N;
     }
 
