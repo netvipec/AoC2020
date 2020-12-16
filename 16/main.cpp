@@ -132,55 +132,44 @@ result_t solve2(input_t const& input_data) {
 
     std::vector<std::vector<bool>> possibilities(input_data.my_ticket.size(),
                                                  std::vector<bool>(input_data.my_ticket.size(), true));
-    ll retry_count = 0;
-    for (;;) {
-        retry_count++;
-        for (size_t i = 0; i < input_data.other_tickets.size(); i++) {
-            if (!valid_tickets[i]) {
-                continue;
-            }
 
-            for (size_t j = 0; j < input_data.other_tickets[i].size(); j++) {
-                for (size_t k = 0; k < input_data.ranges.size(); k++) {
-                    auto const value = input_data.other_tickets[i][j];
-                    if (!is_valid(input_data.ranges[k].range1, value)
-                        && !is_valid(input_data.ranges[k].range2, value)) {
-                        possibilities[j][k] = false;
-                    }
+    for (size_t i = 0; i < input_data.other_tickets.size(); i++) {
+        if (!valid_tickets[i]) {
+            continue;
+        }
+
+        for (size_t j = 0; j < input_data.other_tickets[i].size(); j++) {
+            for (size_t k = 0; k < input_data.ranges.size(); k++) {
+                auto const value = input_data.other_tickets[i][j];
+                if (!is_valid(input_data.ranges[k].range1, value) && !is_valid(input_data.ranges[k].range2, value)) {
+                    possibilities[j][k] = false;
                 }
             }
         }
+    }
 
+    ll retry_count = 0;
+    for (;;) {
+        retry_count++;
         for (size_t j = 0; j < possibilities.size(); j++) {
             auto const p = std::count(std::cbegin(possibilities[j]), std::cend(possibilities[j]), true);
             if (p == 1) {
                 auto const p_it = std::find(std::cbegin(possibilities[j]), std::cend(possibilities[j]), true);
+                assert(p_it != std::cend(possibilities[j]));
                 auto const p_idx = std::distance(std::cbegin(possibilities[j]), p_it);
-                for (size_t k = 0; k < possibilities.size(); k++) {
-                    if (j == k) {
-                        continue;
-                    }
-                    possibilities[k][p_idx] = false;
-                }
+                std::for_each(std::begin(possibilities), std::begin(possibilities) + j, [=](auto& elem) {
+                    elem[p_idx] = false;
+                });
+                std::for_each(std::begin(possibilities) + j + 1, std::end(possibilities), [=](auto& elem) {
+                    elem[p_idx] = false;
+                });
             }
         }
 
         // std::cout << "retry: " << retry_count << std::endl;
-        bool retry = false;
-        for (size_t j = 0; j < possibilities.size(); j++) {
-            auto const p = std::count(std::cbegin(possibilities[j]), std::cend(possibilities[j]), true);
-            if (p == 1) {
-                // auto const p_it = std::find(std::cbegin(possibilities[j]), std::cend(possibilities[j]), true);
-                // auto const p_idx = std::distance(std::cbegin(possibilities[j]), p_it);
-                // std::cout << j << " -> " << p_idx << std::endl;
-            } else if (p == 0) {
-                // std::cout << "error: " << j << std::endl;
-            } else {
-                retry = true;
-                break;
-            }
-        }
-        // std::cout << std::endl;
+        bool retry = std::any_of(std::cbegin(possibilities), std::cend(possibilities), [](auto const& elem) {
+            return std::count(std::cbegin(elem), std::cend(elem), true) > 1;
+        });
         if (!retry) {
             break;
         }
