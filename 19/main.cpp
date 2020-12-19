@@ -122,38 +122,45 @@ result_t solve1(input_t const& input_data) {
     return ans;
 }
 
-result_t solve2(input_t const& input_data) {
-    return -1;
-    auto r42 = input_data.first.find(42);
-    auto r31 = input_data.first.find(31);
-    auto const expand_r42 = expand_rule(r42->first, r42->second, input_data);
-    auto const expand_r31 = expand_rule(r31->first, r31->second, input_data);
+std::vector<ll> match_rule(std::pair<ll, std::vector<expression_t>> const& rule,
+                           input_t const& rules,
+                           std::string const& line,
+                           std::vector<ll> const& idx) {
+    std::vector<ll> outer;
+    for (auto const& r : rule.second) {
+        std::vector<ll> inner(idx);
+        for (auto const& e : r.expression_list) {
+            if (!e.is_subrule) {
+                for (auto& index : inner) {
+                    if (index != -1 && index < static_cast<ll>(line.size()) && e.literal[0] == line[index]) {
+                        index++;
+                    } else {
+                        index = -1;
+                    }
+                }
+            } else {
+                auto const subrule_it = rules.first.find(e.subrule_index);
+                assert(subrule_it != std::cend(rules.first));
+                inner = match_rule(*subrule_it, rules, line, inner);
+            }
 
-    auto const max42_len =
-        std::min_element(std::cbegin(expand_r42), std::cend(expand_r42), [](auto const& lhs, auto const& rhs) {
-            return lhs.size() < rhs.size();
-        })->size();
-    auto const max31_len =
-        std::min_element(std::cbegin(expand_r31), std::cend(expand_r31), [](auto const& lhs, auto const& rhs) {
-            return lhs.size() < rhs.size();
-        })->size();
-    std::cout << max42_len << std::endl;
-    std::cout << max31_len << std::endl;
+            if (inner.empty()) {
+                break;
+            }
+            auto const c = std::count(std::cbegin(inner), std::cend(inner), -1);
+            if (c == static_cast<int>(inner.size())) {
+                inner.clear();
+                break;
+            }
+        }
 
-    // Expand normal
-
-    auto r = input_data.first.find(0);
-    assert(r != std::cend(input_data.first));
-
-    auto const expand_r = expand_rule(r->first, r->second, input_data);
-
-    std::vector<bool> matched(input_data.second.size(), false);
-    for (size_t i = 0; i < matched.size(); i++) {
-        matched[i] = expand_r.find(input_data.second[i]) != std::cend(expand_r);
+        outer.insert(outer.end(), std::cbegin(inner), std::cend(inner));
     }
 
-    // Expand new rules
+    return outer;
+}
 
+result_t solve2(input_t const& input_data) {
     // 8: 42 | 42 8
     // 11: 42 31 | 42 11 31
     auto input_data_copy = input_data;
@@ -171,9 +178,14 @@ result_t solve2(input_t const& input_data) {
     it11->second = new11;
     auto r0 = input_data_copy.first.find(0);
     assert(r0 != std::cend(input_data_copy.first));
+    std::vector<ll> idx;
+    std::vector<bool> matched(input_data.second.size(), false);
     for (size_t i = 0; i < matched.size(); i++) {
         if (!matched[i]) {
-            matched[i] = expand_r.find(input_data_copy.second[i]) != std::cend(expand_r);
+            idx = { 0 };
+            auto const r = match_rule(*r0, input_data_copy, input_data_copy.second[i], idx);
+            auto const it = std::find(std::cbegin(r), std::cend(r), static_cast<ll>(input_data_copy.second[i].size()));
+            matched[i] = it != std::cend(r);
         }
     }
     result_t ans = std::count(std::cbegin(matched), std::cend(matched), true);
