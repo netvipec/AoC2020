@@ -91,7 +91,7 @@ std::unordered_set<std::string> expand_rule(ll rule_id, std::vector<expression_t
                 std::vector<std::string> oo;
                 std::for_each(std::begin(one), std::end(one), [&](auto& o) {
                     std::for_each(std::begin(inner_result), std::end(inner_result), [&](auto& ir) {
-                        oo.push_back(o + ir);
+                        oo.emplace_back(o + ir);
                     });
                 });
                 one.swap(oo);
@@ -99,33 +99,15 @@ std::unordered_set<std::string> expand_rule(ll rule_id, std::vector<expression_t
         }
 
         result.insert(std::cbegin(one), std::cend(one));
-        one.clear();
     }
 
     return result;
 }
 
-result_t solve1(input_t const& input_data) {
-    auto r = input_data.first.find(0);
-    assert(r != std::cend(input_data.first));
-
-    auto const expand_r = expand_rule(r->first, r->second, input_data);
-
-    // std::for_each(std::cbegin(expand_r), std::cend(expand_r), [&](auto const& elem) {
-    //     std::cout << elem << std::endl;
-    // });
-    // std::cout << std::endl;
-
-    result_t ans = std::count_if(std::cbegin(input_data.second), std::cend(input_data.second), [&](auto const& elem) {
-        return expand_r.find(elem) != std::cend(expand_r);
-    });
-    return ans;
-}
-
-std::vector<ll> match_rule(std::pair<ll, std::vector<expression_t>> const& rule,
-                           input_t const& rules,
-                           std::string const& line,
-                           std::vector<ll> const& idx) {
+std::vector<ll> match_rule1(std::pair<ll, std::vector<expression_t>> const& rule,
+                            input_t const& rules,
+                            std::string const& line,
+                            std::vector<ll> const& idx) {
     std::vector<ll> outer;
     for (auto const& r : rule.second) {
         std::vector<ll> inner(idx);
@@ -141,7 +123,7 @@ std::vector<ll> match_rule(std::pair<ll, std::vector<expression_t>> const& rule,
             } else {
                 auto const subrule_it = rules.first.find(e.subrule_index);
                 assert(subrule_it != std::cend(rules.first));
-                inner = match_rule(*subrule_it, rules, line, inner);
+                inner = match_rule1(*subrule_it, rules, line, inner);
             }
 
             if (inner.empty()) {
@@ -155,12 +137,194 @@ std::vector<ll> match_rule(std::pair<ll, std::vector<expression_t>> const& rule,
         }
 
         outer.insert(outer.end(), std::cbegin(inner), std::cend(inner));
+        auto const it = std::find(std::cbegin(inner), std::cend(inner), line.size());
+        if (it != std::cend(inner)) {
+            return outer;
+        }
+    }
+
+    return outer;
+}
+
+result_t solve1(input_t const& input_data) {
+    auto r = input_data.first.find(0);
+    assert(r != std::cend(input_data.first));
+
+#if 1
+    result_t ans =
+        std::accumulate(std::cbegin(input_data.second),
+                        std::cend(input_data.second),
+                        0ll,
+                        [&](auto const& base, auto const& elem) {
+                            auto const result = match_rule1(*r, input_data, elem, { 0 });
+                            auto const it =
+                                std::find(std::cbegin(result), std::cend(result), static_cast<ll>(elem.size()));
+                            return base + ((it != std::cend(result)) ? 1 : 0);
+                        });
+    return ans;
+#else
+    auto const expand_r = expand_rule(r->first, r->second, input_data);
+
+    // std::for_each(std::cbegin(expand_r), std::cend(expand_r), [&](auto const& elem) {
+    //     std::cout << elem << std::endl;
+    // });
+    // std::cout << std::endl;
+
+    result_t ans1 = std::count_if(std::cbegin(input_data.second), std::cend(input_data.second), [&](auto const& elem) {
+        return expand_r.find(elem) != std::cend(expand_r);
+    });
+    return ans1;
+#endif
+}
+
+std::unordered_set<std::string> expand42;
+std::unordered_set<std::string> expand31;
+
+std::vector<ll> parse_rule8(std::vector<ll> const& inner, std::string const& line) {
+    std::vector<ll> all_inn;
+    std::vector<ll> new_inn;
+    std::vector<ll> inn = inner;
+    std::vector<std::pair<ll, std::string>> s;
+    for (;;) {
+        s.clear();
+        for (auto const& i : inn) {
+            for (auto const& sr : expand42) {
+                if (sr.size() <= line.size() - i) {
+                    assert(i <= static_cast<ll>(line.size()));
+                    auto it = std::mismatch(std::cbegin(sr), std::cend(sr), line.cbegin() + i, line.cend());
+                    if (it.first == std::cend(sr)) {
+                        s.emplace_back(i, sr);
+                    }
+                }
+            }
+        }
+        if (!s.empty()) {
+            for (auto const& ss : s) {
+                new_inn.emplace_back(ss.first + static_cast<ll>(ss.second.size()));
+            }
+            all_inn.insert(all_inn.end(), std::cbegin(new_inn), std::cend(new_inn));
+            std::swap(inn, new_inn);
+            new_inn.clear();
+        } else {
+            return all_inn;
+        }
+    }
+}
+
+std::vector<ll> parse_rule11(std::vector<ll> const& inner, std::string const& line) {
+    std::vector<std::pair<ll, ll>> all_inn;
+    std::vector<std::pair<ll, ll>> new_inn;
+    std::vector<std::pair<ll, ll>> inn(inner.size());
+    std::transform(std::cbegin(inner), std::cend(inner), inn.begin(), [](auto const& elem) {
+        return std::make_pair(elem, 0);
+    });
+    for (;;) {
+        new_inn.clear();
+        for (auto const& i : inn) {
+            for (auto const& sr : expand42) {
+                if (sr.size() <= line.size() - i.first) {
+                    assert(i.first <= static_cast<ll>(line.size()));
+                    auto it = std::mismatch(std::cbegin(sr), std::cend(sr), line.cbegin() + i.first, line.cend());
+                    if (it.first == std::cend(sr)) {
+                        new_inn.emplace_back(i.first + static_cast<ll>(sr.size()), i.second + 1);
+                    }
+                }
+            }
+        }
+        if (new_inn.empty()) {
+            break;
+        }
+        all_inn.insert(all_inn.end(), std::cbegin(new_inn), std::cend(new_inn));
+        std::swap(inn, new_inn);
+        new_inn.clear();
+    }
+
+    inn = all_inn;
+    all_inn.clear();
+    for (;;) {
+        new_inn.clear();
+        for (auto const& i : inn) {
+            for (auto const& sr : expand31) {
+                if (sr.size() <= line.size() - i.first) {
+                    assert(i.first <= static_cast<ll>(line.size()));
+                    auto it = std::mismatch(std::cbegin(sr), std::cend(sr), line.cbegin() + i.first, line.cend());
+                    if (it.first == std::cend(sr)) {
+                        new_inn.emplace_back(i.first + static_cast<ll>(sr.size()), i.second - 1);
+                    }
+                }
+            }
+        }
+
+        if (new_inn.empty()) {
+            break;
+        }
+
+        std::copy_if(std::cbegin(new_inn), std::cend(new_inn), std::back_inserter(all_inn), [](auto const& elem) {
+            return elem.second == 0;
+        });
+        std::swap(inn, new_inn);
+    }
+    std::vector<ll> index;
+    std::transform(std::cbegin(all_inn), std::cend(all_inn), std::back_inserter(index), [](auto const& elem) {
+        return elem.first;
+    });
+    return index;
+}
+
+std::vector<ll> match_rule2(std::pair<ll, std::vector<expression_t>> const& rule,
+                            input_t const& rules,
+                            std::string const& line,
+                            std::vector<ll> const& idx) {
+    std::vector<ll> outer;
+    for (auto const& r : rule.second) {
+        std::vector<ll> inner(idx);
+        for (auto const& e : r.expression_list) {
+            if (!e.is_subrule) {
+                for (auto& index : inner) {
+                    if (index != -1 && index < static_cast<ll>(line.size()) && e.literal[0] == line[index]) {
+                        index++;
+                    } else {
+                        index = -1;
+                    }
+                }
+            } else {
+                auto const subrule_it = rules.first.find(e.subrule_index);
+                assert(subrule_it != std::cend(rules.first));
+                if (subrule_it->first == 8) {
+                    inner = parse_rule8(inner, line);
+                } else if (subrule_it->first == 11) {
+                    inner = parse_rule11(inner, line);
+                } else {
+                    inner = match_rule2(*subrule_it, rules, line, inner);
+                }
+            }
+
+            if (inner.empty()) {
+                break;
+            }
+            auto const c = std::count(std::cbegin(inner), std::cend(inner), -1);
+            if (c == static_cast<int>(inner.size())) {
+                inner.clear();
+                break;
+            }
+        }
+
+        outer.insert(outer.end(), std::cbegin(inner), std::cend(inner));
+        auto const it = std::find(std::cbegin(inner), std::cend(inner), line.size());
+        if (it != std::cend(inner)) {
+            return outer;
+        }
     }
 
     return outer;
 }
 
 result_t solve2(input_t const& input_data) {
+    auto it42 = input_data.first.find(42);
+    auto it31 = input_data.first.find(31);
+    expand42 = expand_rule(it42->first, it42->second, input_data);
+    expand31 = expand_rule(it31->first, it31->second, input_data);
+
     // 8: 42 | 42 8
     // 11: 42 31 | 42 11 31
     auto input_data_copy = input_data;
@@ -183,9 +347,12 @@ result_t solve2(input_t const& input_data) {
     for (size_t i = 0; i < matched.size(); i++) {
         if (!matched[i]) {
             idx = { 0 };
-            auto const r = match_rule(*r0, input_data_copy, input_data_copy.second[i], idx);
+            auto const r = match_rule2(*r0, input_data_copy, input_data_copy.second[i], idx);
             auto const it = std::find(std::cbegin(r), std::cend(r), static_cast<ll>(input_data_copy.second[i].size()));
             matched[i] = it != std::cend(r);
+            // if (matched[i]) {
+            //     std::cout << i << " -> " << input_data.second[i] << std::endl;
+            // }
         }
     }
     result_t ans = std::count(std::cbegin(matched), std::cend(matched), true);
