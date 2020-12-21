@@ -2,7 +2,8 @@
 
 using ll = int64_t;
 using input_t = std::vector<ll>;
-using result_t = ll;
+using result1_t = ll;
+using result2_t = ll;
 
 static std::vector<std::string> split(std::string const& s, char delim) {
     std::stringstream ss(s);
@@ -30,14 +31,14 @@ input_t read_input() {
     return input_values;
 }
 
-result_t solve1(input_t const& input_data) {
-    result_t ans = -1;
+result1_t solve1(input_t const& input_data) {
+    result1_t ans = -1;
     // TODO: insert code
     return ans;
 }
 
-result_t solve2(input_t const& input_data) {
-    result_t ans = -1;
+result2_t solve2(input_t const& input_data) {
+    result2_t ans = -1;
     // TODO: insert code
     return ans;
 }
