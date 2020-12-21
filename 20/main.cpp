@@ -117,215 +117,216 @@ result_t solve1(input_t const& input_data) {
     return ans;
 }
 
-/*
-struct tile_pos_t {
-    ll tile_id;
-    ll x;
-    ll y;
-    ll pos;
-};
+void fill_edges(std::unordered_map<ll, std::set<ll>> const& tiles_neighbors_count,
+                std::unordered_map<ll, std::set<ll>> const& tiles_neighbors,
+                std::vector<std::vector<ll>>& tile_matrix) {
+    auto corner_tiles_it = tiles_neighbors_count.find(2);
+    assert(corner_tiles_it != std::cend(tiles_neighbors_count));
+    auto corner_tile_it = corner_tiles_it->second.cbegin();
+    assert(corner_tile_it != std::cend(corner_tiles_it->second));
 
-std::map<ll, ll>
-more_close_border(std::vector<border_inverse_t> const& bii, ll tile_id, std::vector<tile_pos_t> const& used_tiles) {
-    std::map<ll, ll> border_c;
-    for (size_t i = 0; i < bii.size() - 1; i++) {
-        if ((bii[i].tile_id == tile_id || bii[i + 1].tile_id == tile_id) && (bii[i].border == bii[i + 1].border)) {
-            auto other_tile_id = bii[i].tile_id;
-            if (other_tile_id == tile_id) {
-                other_tile_id = bii[i + 1].tile_id;
+    auto edge_tiles_it = tiles_neighbors_count.find(3);
+    assert(edge_tiles_it != std::cend(tiles_neighbors_count));
+
+    ll last_tile_id = *corner_tile_it;
+    tile_matrix[0][0] = last_tile_id;
+    std::unordered_set<ll> used_tiles;
+    used_tiles.insert(last_tile_id);
+    std::cout << "put: " << last_tile_id << ", i: 0, d: 0" << std::endl;
+    auto const square = static_cast<ll>(tile_matrix.size());
+    for (ll d = 0; d < 4; d++) {
+        for (ll i = 1; i < square - 1; i++) {
+            auto const neighbors_it = tiles_neighbors.find(last_tile_id);
+            assert(neighbors_it != std::cend(tiles_neighbors));
+            auto neighbor_it =
+                std::find_if(std::cbegin(neighbors_it->second), std::cend(neighbors_it->second), [&](auto const& elem) {
+                    auto const used_it = used_tiles.find(elem);
+                    auto const edge_it = edge_tiles_it->second.find(elem);
+                    return used_it == std::cend(used_tiles) && edge_it != std::cend(edge_tiles_it->second);
+                });
+
+            assert(neighbor_it != std::cend(neighbors_it->second));
+
+            last_tile_id = *neighbor_it;
+            used_tiles.insert(last_tile_id);
+            std::cout << "put: " << last_tile_id << ", i: " << i << ", d: " << d << std::endl;
+            switch (d) {
+                case 0:
+                    tile_matrix[0][i] = last_tile_id;
+                    break;
+                case 1:
+                    tile_matrix[i][square - 1] = last_tile_id;
+                    break;
+                case 2:
+                    tile_matrix[square - 1][square - 1 - i] = last_tile_id;
+                    break;
+                case 3:
+                    tile_matrix[square - 1 - i][0] = last_tile_id;
+                    break;
+                default:
+                    assert(false);
+                    break;
             }
-            if (other_tile_id == tile_id) {
-                continue;
-            }
-            auto const it = std::find_if(std::cbegin(used_tiles), std::cend(used_tiles), [=](auto const& t) {
-                return t.tile_id == other_tile_id;
+        }
+
+        if (d != 3) {
+            auto const neighbors_c_it = tiles_neighbors.find(last_tile_id);
+            assert(neighbors_c_it != std::cend(tiles_neighbors));
+            auto const new_corner = std::find_if(std::cbegin(corner_tiles_it->second),
+                                                 std::cend(corner_tiles_it->second),
+                                                 [&](auto const& elem) {
+                                                     auto const is_used_it = used_tiles.find(elem);
+                                                     auto const is_neighbor_it = neighbors_c_it->second.find(elem);
+                                                     return is_used_it == std::cend(used_tiles)
+                                                            && is_neighbor_it != std::cend(neighbors_c_it->second);
+                                                 });
+            assert(new_corner != std::cend(corner_tiles_it->second));
+            last_tile_id = *new_corner;
+            used_tiles.insert(last_tile_id);
+            std::cout << "put: " << last_tile_id << ", i: " << square - 1 << ", d: " << d << std::endl;
+        }
+        switch (d) {
+            case 0:
+                tile_matrix[0][square - 1] = last_tile_id;
+                break;
+            case 1:
+                tile_matrix[square - 1][square - 1] = last_tile_id;
+                break;
+            case 2:
+                tile_matrix[square - 1][0] = last_tile_id;
+                break;
+            case 3:
+                break;
+            default:
+                assert(false);
+                break;
+        }
+    }
+}
+
+template <class T, class Comp, class Alloc, class Predicate>
+void discard_if(std::set<T, Comp, Alloc>& c, Predicate pred) {
+    for (auto it{ c.begin() }, end{ c.end() }; it != end;) {
+        if (pred(*it)) {
+            it = c.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
+void fill_inside(std::unordered_map<ll, std::set<ll>> const& tiles_neighbors_count,
+                 std::unordered_map<ll, std::set<ll>> const& tiles_neighbors,
+                 std::vector<std::vector<ll>>& tile_matrix) {
+    auto inside_tiles_it = tiles_neighbors_count.find(4);
+    assert(inside_tiles_it != std::cend(tiles_neighbors_count));
+
+    std::unordered_set<ll> used_tiles;
+    auto const square = static_cast<ll>(tile_matrix.size());
+    for (ll i = 1; i < square - 1; i++) {
+        for (ll j = 1; j < square - 1; j++) {
+            auto neighbors1_it = tiles_neighbors.find(tile_matrix[i - 1][j]);
+            assert(neighbors1_it != std::cend(tiles_neighbors));
+            auto neighbors2_it = tiles_neighbors.find(tile_matrix[i][j - 1]);
+            assert(neighbors2_it != std::cend(tiles_neighbors));
+            std::set<ll> f;
+            std::set_intersection(std::cbegin(neighbors1_it->second),
+                                  std::cend(neighbors1_it->second),
+                                  std::cbegin(neighbors2_it->second),
+                                  std::cend(neighbors2_it->second),
+                                  std::inserter(f, f.end()));
+
+            discard_if(f, [&](auto const& elem) {
+                auto const is_used_it = used_tiles.find(elem);
+                return is_used_it != std::cend(used_tiles)
+                       || inside_tiles_it->second.find(elem) == std::cend(inside_tiles_it->second);
             });
-            if (it != std::cend(used_tiles)) {
-                continue;
-            }
 
-            border_c[other_tile_id]++;
-        }
-    }
-    return border_c;
-}
-
-ll square;
-std::map<ll, tiles_border_t> border_data;
-
-struct bb_t {
-    ll dir;
-    ll type;
-};
-
-void get_bi(tiles_border_t const& b0, ll dir, tiles_border_t const& b, std::vector<bb_t>& bi) {
-    for (ll i = 0; i < 8; i++) {
-        for (ll j = 0; j < 8; j++) {
-            if (b0.tb_index[i] == b.tb_index[j]) {
-                bi.emplace_back(bb_t{ dir, i });
-            }
+            assert(f.size() == 1);
+            tile_matrix[i][j] = *f.cbegin();
+            used_tiles.insert(*f.cbegin());
+            std::cout << "put: " << tile_matrix[i][j] << ", i: " << i << ", j: " << j << std::endl;
         }
     }
 }
 
-void get_solution(std::vector<tile_pos_t>& used_tiles, std::vector<border_inverse_t> const& border_inv_info) {
-    for (ll i = 0; i < square * square; i++) {
-        ll x = i / square;
-        ll y = i % square;
-
-        auto const b0_it = border_data.find(used_tiles[i].tile_id);
-        assert(b0_it != std::cend(border_data));
-
-        std::vector<bb_t> borders_i;
-        if (x != 0) {
-            auto const bu_it = border_data.find(used_tiles[i - square].tile_id);
-            assert(bu_it != std::cend(border_data));
-            get_bi(b0_it->second, 0, bu_it->second, borders_i);
+result_t solve2(input_t const& input_data) {
+    std::vector<border_inverse_t> border_inv_info;
+    for (auto const& t : input_data) {
+        auto const border = get_border(t.second);
+        for (ll i = 0; i < static_cast<ll>(border.borders_arr.size()); i++) {
+            border_inv_info.emplace_back(border_inverse_t{ border.borders_arr[i], t.first, i });
         }
-        if (x != square - 1) {
-            auto const bd_it = border_data.find(used_tiles[i + square].tile_id);
-            assert(bd_it != std::cend(border_data));
-            get_bi(b0_it->second, 2, bd_it->second, borders_i);
-        }
+    }
 
-        if (y != 0) {
-            auto const bl_it = border_data.find(used_tiles[i - 1].tile_id);
-            assert(bl_it != std::cend(border_data));
-            get_bi(b0_it->second, 3, bl_it->second, borders_i);
-        }
-        if (y != square - 1) {
-            auto const br_it = border_data.find(used_tiles[i + 1].tile_id);
-            assert(br_it != std::cend(border_data));
-            get_bi(b0_it->second, 1, br_it->second, borders_i);
-        }
+    auto const square = static_cast<ll>(sqrt(input_data.size()));
+    assert(input_data.size() == square * square);
 
-        std::for_each(std::cbegin(borders_i), std::cend(borders_i), [](auto const& elem) {
-            std::cout << "(dir: " << elem.dir << ", type: " << elem.type << ")" << std::endl;
+    std::cout << "Matrix size: " << square << "x" << square << std::endl;
+
+    std::sort(std::begin(border_inv_info), std::end(border_inv_info), [](auto const& lhs, auto const& rhs) {
+        return std::tie(lhs.border, lhs.tile_id, lhs.type) < std::tie(rhs.border, rhs.tile_id, rhs.type);
+    });
+
+    for (ll i = 1; i < static_cast<ll>(border_inv_info.size()) - 1;) {
+        if (border_inv_info[i - 1].border != border_inv_info[i].border
+            && border_inv_info[i].border != border_inv_info[i + 1].border) {
+            border_inv_info.erase(border_inv_info.begin() + i);
+        } else {
+            i++;
+        }
+    }
+    if (border_inv_info[border_inv_info.size() - 2].border != border_inv_info[border_inv_info.size() - 1].border) {
+        border_inv_info.erase(border_inv_info.end() - 1);
+    }
+    if (border_inv_info[0].border != border_inv_info[1].border) {
+        border_inv_info.erase(border_inv_info.begin());
+    }
+
+    std::unordered_map<ll, std::vector<std::pair<ll, ll>>> neighbors_info;
+    std::for_each(std::cbegin(border_inv_info), std::cend(border_inv_info), [&](auto const& elem) {
+        neighbors_info[elem.border].emplace_back(elem.tile_id, elem.type);
+    });
+
+    std::unordered_map<ll, std::set<ll>> tiles_neighbors;
+    std::for_each(std::cbegin(neighbors_info), std::cend(neighbors_info), [&](auto const& elem) {
+        std::for_each(std::cbegin(elem.second), std::cend(elem.second), [&](auto const& e1) {
+            std::for_each(std::cbegin(elem.second), std::cend(elem.second), [&](auto const& e2) {
+                if (e1.first != e2.first) {
+                    tiles_neighbors[e1.first].insert(e2.first);
+                    tiles_neighbors[e2.first].insert(e1.first);
+                }
+            });
+        });
+    });
+
+    std::unordered_map<ll, std::set<ll>> tiles_neighbors_count;
+    std::for_each(std::cbegin(tiles_neighbors), std::cend(tiles_neighbors), [&](auto const& elem) {
+        tiles_neighbors_count[static_cast<ll>(elem.second.size())].insert(elem.first);
+    });
+
+    // std::for_each(std::cbegin(tiles_neighbors), std::cend(tiles_neighbors), [&](auto const& elem) {
+    //     std::cout << elem.first << ": ";
+    //     std::for_each(std::cbegin(elem.second), std::cend(elem.second), [&](auto const& e) {
+    //         std::cout << e << ",";
+    //     });
+    //     std::cout << std::endl;
+    // });
+    std::for_each(std::cbegin(tiles_neighbors_count), std::cend(tiles_neighbors_count), [&](auto const& elem) {
+        std::cout << elem.first << ": ";
+        std::for_each(std::cbegin(elem.second), std::cend(elem.second), [&](auto const& e) {
+            std::cout << e << ",";
         });
         std::cout << std::endl;
-    }
-}
+    });
 
-void get_arrange(std::vector<tile_pos_t>& used_tiles,
-                 std::vector<ll> const& corners,
-                 std::vector<border_inverse_t> const& border_inv_info,
-                 ll idx = 1) {
-    if (idx == square * square) {
-        std::cout << "SOLUTION" << std::endl;
-        std::for_each(std::cbegin(used_tiles), std::cend(used_tiles), [](auto const& elem) {
-            std::cout << elem.tile_id << " -> (" << elem.x << "," << elem.y << ")," << std::endl;
-        });
-        std::cout << std::endl;
-        get_solution(used_tiles, border_inv_info);
-    }
-    ll i = idx / square;
-    ll j = idx % square;
+    std::vector<std::vector<ll>> tile_matrix(square, std::vector<ll>(square));
+    auto inside_tiles_it = tiles_neighbors_count.find(4);
+    assert(inside_tiles_it != std::cend(tiles_neighbors_count));
 
-    auto search_tile_id = used_tiles.back().tile_id;
-    if (j == 0) {
-        search_tile_id = used_tiles[used_tiles.size() - square].tile_id;
-    }
-    auto const most_common = more_close_border(border_inv_info, search_tile_id, used_tiles);
-    if (most_common.size() == 0) {
-        return;
-    }
+    fill_edges(tiles_neighbors_count, tiles_neighbors, tile_matrix);
+    fill_inside(tiles_neighbors_count, tiles_neighbors, tile_matrix);
 
-    if ((j == square - 1 && (i == 0 || i == square - 1)) || (j == 0 && i == square - 1)) {
-        for (auto const& mc : most_common) {
-            auto const cit = std::find(std::cbegin(corners), std::cend(corners), mc.first);
-            if (cit == std::cend(corners)) {
-                continue;
-            }
-            used_tiles.emplace_back(tile_pos_t{ mc.first, i, j, -1 });
-
-            // std::cout << "put " << used_tiles.back().tile_id << ", i: " << i << ", j: " << j << std::endl;
-            get_arrange(used_tiles, corners, border_inv_info, idx + 1);
-            // std::cout << "remove " << used_tiles.back().tile_id << ", i: " << i << ", j: " << j << std::endl;
-
-            used_tiles.pop_back();
-        }
-    } else {
-        for (auto const& mc : most_common) {
-            auto const cit = std::find(std::cbegin(corners), std::cend(corners), mc.first);
-            if (cit != std::cend(corners)) {
-                continue;
-            }
-            used_tiles.emplace_back(tile_pos_t{ mc.first, i, j, -1 });
-
-            std::cout << "put " << used_tiles.back().tile_id << ", i: " << i << ", j: " << j << std::endl;
-            get_arrange(used_tiles, corners, border_inv_info, idx + 1);
-            std::cout << "remove " << used_tiles.back().tile_id << ", i: " << i << ", j: " << j << std::endl;
-
-            used_tiles.pop_back();
-        }
-    }
-}
-*/
-result_t solve2(input_t const& input_data) { /*
-     std::vector<border_inverse_t> border_inv_info;
-     for (auto const& t : input_data) {
-         auto const border = get_border(t.second);
-         border_data.emplace(t.first, border);
-         border_inv_info.emplace_back(border_inverse_t{ border.tb.up, t.first, 0 });
-         border_inv_info.emplace_back(border_inverse_t{ border.tb.down, t.first, 1 });
-         border_inv_info.emplace_back(border_inverse_t{ border.tb.left, t.first, 2 });
-         border_inv_info.emplace_back(border_inverse_t{ border.tb.right, t.first, 3 });
-
-         border_inv_info.emplace_back(border_inverse_t{ border.tb.up2, t.first, 4 });
-         border_inv_info.emplace_back(border_inverse_t{ border.tb.down2, t.first, 5 });
-         border_inv_info.emplace_back(border_inverse_t{ border.tb.left2, t.first, 6 });
-         border_inv_info.emplace_back(border_inverse_t{ border.tb.right2, t.first, 7 });
-     }
-
-     assert(input_data.size() == static_cast<ll>(sqrt(input_data.size())) * static_cast<ll>(sqrt(input_data.size())));
-     square = static_cast<ll>(sqrt(input_data.size()));
-     std::sort(std::begin(border_inv_info), std::end(border_inv_info), [](auto const& lhs, auto const& rhs) {
-         return std::tie(lhs.border, lhs.tile_id, lhs.type) < std::tie(rhs.border, rhs.tile_id, rhs.type);
-     });
-
-     std::cout << "Matrix size: " << square << "x" << square << std::endl;
-
-     std::map<ll, ll> tiles_border_info;
-     for (auto bii_it = border_inv_info.cbegin(); bii_it != border_inv_info.cend(); bii_it++) {
-         auto const c1 = std::count_if(border_inv_info.cbegin(), bii_it, [&](auto const& elem) {
-             return elem.border == bii_it->border;
-         });
-         auto const c2 = std::count_if(bii_it + 1, border_inv_info.cend(), [&](auto const& elem) {
-             return elem.border == bii_it->border;
-         });
-         if (c1 + c2 > 0) {
-             tiles_border_info[bii_it->tile_id] += c1 + c2;
-         }
-     }
-
-     std::vector<std::pair<ll, ll>> bi;
-     std::for_each(std::begin(tiles_border_info), std::end(tiles_border_info), [&](auto const& elem) {
-         return bi.emplace_back(elem.first, elem.second);
-     });
-     std::sort(std::begin(bi), std::end(bi), [](auto const& lhs, auto const& rhs) {
-         return lhs.second < rhs.second;
-     });
-
-     std::vector<ll> corners;
-     result_t ans = 1;
-     auto it = bi.cbegin();
-     for (size_t i = 0; i < 4; i++, it++) {
-         ans *= it->first;
-         corners.emplace_back(it->first);
-     }
-
-     // std::for_each(std::cbegin(bi), std::cend(bi), [](auto const& elem) {
-     //     std::cout << "(" << elem.second << "->" << elem.first << "), " << std::endl;
-     // });
-     // std::cout << std::endl;
-     // std::for_each(std::cbegin(border_inv_info), std::cend(border_inv_info), [](auto const& elem) {
-     //     std::cout << "(" << elem.border << "->" << elem.tile_id << ", " << elem.type << "), " << std::endl;
-     // });
-
-     std::vector<tile_pos_t> used_tiles{ tile_pos_t{ corners.front(), 0, 0, -1 } };
-     get_arrange(used_tiles, corners, border_inv_info);
-
-     return ans;*/
     return -1;
 }
 
