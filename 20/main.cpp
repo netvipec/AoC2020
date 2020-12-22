@@ -132,7 +132,7 @@ void fill_edges(std::unordered_map<ll, std::set<ll>> const& tiles_neighbors_coun
     tile_matrix[0][0] = last_tile_id;
     std::unordered_set<ll> used_tiles;
     used_tiles.insert(last_tile_id);
-    std::cout << "put: " << last_tile_id << ", i: 0, d: 0" << std::endl;
+    // std::cout << "put: " << last_tile_id << ", i: 0, d: 0" << std::endl;
     auto const square = static_cast<ll>(tile_matrix.size());
     for (ll d = 0; d < 4; d++) {
         for (ll i = 1; i < square - 1; i++) {
@@ -149,7 +149,7 @@ void fill_edges(std::unordered_map<ll, std::set<ll>> const& tiles_neighbors_coun
 
             last_tile_id = *neighbor_it;
             used_tiles.insert(last_tile_id);
-            std::cout << "put: " << last_tile_id << ", i: " << i << ", d: " << d << std::endl;
+            // std::cout << "put: " << last_tile_id << ", i: " << i << ", d: " << d << std::endl;
             switch (d) {
                 case 0:
                     tile_matrix[0][i] = last_tile_id;
@@ -183,7 +183,7 @@ void fill_edges(std::unordered_map<ll, std::set<ll>> const& tiles_neighbors_coun
             assert(new_corner != std::cend(corner_tiles_it->second));
             last_tile_id = *new_corner;
             used_tiles.insert(last_tile_id);
-            std::cout << "put: " << last_tile_id << ", i: " << square - 1 << ", d: " << d << std::endl;
+            // std::cout << "put: " << last_tile_id << ", i: " << square - 1 << ", d: " << d << std::endl;
         }
         switch (d) {
             case 0:
@@ -245,7 +245,55 @@ void fill_inside(std::unordered_map<ll, std::set<ll>> const& tiles_neighbors_cou
             assert(f.size() == 1);
             tile_matrix[i][j] = *f.cbegin();
             used_tiles.insert(*f.cbegin());
-            std::cout << "put: " << tile_matrix[i][j] << ", i: " << i << ", j: " << j << std::endl;
+            // std::cout << "put: " << tile_matrix[i][j] << ", i: " << i << ", j: " << j << std::endl;
+        }
+    }
+}
+
+const std::array<ll, 4> DX = { -1, 0, 1, 0 };
+const std::array<ll, 4> DY = { 0, 1, 0, -1 };
+
+struct border_t {
+    ll tile1_id;
+    ll tile2_id;
+    ll type1;
+    ll tile2;
+    size_t d;
+};
+
+void get_rotation_flip(std::vector<std::vector<ll>> const& tile_matrix,
+                       std::unordered_map<ll, std::vector<std::pair<ll, ll>>> const& neighbors_info) {
+    std::vector<border_t> border_info;
+    auto const square = static_cast<ll>(tile_matrix.size());
+    for (ll i = 0; i < square; i++) {
+        for (ll j = 0; j < square; j++) {
+            border_info.clear();
+            for (size_t d = 0; d < DX.size(); d++) {
+                ll x = i + DX[d];
+                ll y = j + DY[d];
+
+                if (x < 0 || y < 0 || x >= square || y >= square) {
+                    continue;
+                }
+
+                auto const neighbor_tile_id = tile_matrix[x][y];
+                for (auto const& ni : neighbors_info) {
+                    auto const it0 = std::find_if(std::cbegin(ni.second), std::cend(ni.second), [&](auto const& elem) {
+                        return tile_matrix[i][i] == elem.first;
+                    });
+                    auto const it1 = std::find_if(std::cbegin(ni.second), std::cend(ni.second), [&](auto const& elem) {
+                        return neighbor_tile_id == elem.first;
+                    });
+
+                    if (it0 == std::cend(ni.second) || it1 == std::cend(ni.second)) {
+                        continue;
+                    }
+
+                    border_info.push_back(border_t{ it0->first, it1->first, it0->second, it1->second, d });
+                }
+            }
+
+            std::cout << "HERE" << std::endl;
         }
     }
 }
@@ -326,6 +374,7 @@ result_t solve2(input_t const& input_data) {
 
     fill_edges(tiles_neighbors_count, tiles_neighbors, tile_matrix);
     fill_inside(tiles_neighbors_count, tiles_neighbors, tile_matrix);
+    get_rotation_flip(tile_matrix, neighbors_info);
 
     return -1;
 }
