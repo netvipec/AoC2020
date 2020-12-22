@@ -52,6 +52,11 @@ input_t read_input() {
     return input_values;
 }
 
+// 1 2   2 4   4 3   3 1         1 2, 2 4, 4 3, 3 1
+// 3 4   1 3   2 1   4 2
+
+// 2 1   1 3   3 4   4 2         2 1, 1 3, 3 4, 4 2
+// 4 3   2 4   1 2   3 1
 tiles_border_t get_border(tile_t const& tile) {
     assert(tile.size() == tile.front().size());
     tiles_border_t borders{ 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -63,9 +68,9 @@ tiles_border_t get_border(tile_t const& tile) {
         b.left_r = (b.left_r << 1) | ((tile[tile.size() - 1 - i].front() == '#') ? 1 : 0);
 
         b.up_l = (b.up_l << 1) | ((tile.front()[tile.front().size() - 1 - i] == '#') ? 1 : 0);
-        b.right_l = (b.right_l << 1) | ((tile[tile.size() - 1 - i].back() == '#') ? 1 : 0);
+        b.right_l = (b.right_l << 1) | ((tile[i].front() == '#') ? 1 : 0);
         b.down_l = (b.down_l << 1) | ((tile.back()[i] == '#') ? 1 : 0);
-        b.left_l = (b.left_l << 1) | ((tile[i].front() == '#') ? 1 : 0);
+        b.left_l = (b.left_l << 1) | ((tile[tile.size() - 1 - i].back() == '#') ? 1 : 0);
     }
     return borders;
 }
@@ -254,16 +259,94 @@ const std::array<ll, 4> DX = { -1, 0, 1, 0 };
 const std::array<ll, 4> DY = { 0, 1, 0, -1 };
 
 struct border_t {
-    ll tile1_id;
-    ll tile2_id;
     ll type1;
-    ll tile2;
+    ll type2;
     size_t d;
 };
 
-void get_rotation_flip(std::vector<std::vector<ll>> const& tile_matrix,
-                       std::unordered_map<ll, std::vector<std::pair<ll, ll>>> const& neighbors_info) {
-    std::vector<border_t> border_info;
+struct move_t {
+    ll rotate = 0;
+    bool flip = false; // vertical flip
+
+    bool operator<(move_t const& other) const { return std::tie(rotate, flip) < std::tie(other.rotate, other.flip); }
+
+    move_t& operator=(move_t const& other) {
+        rotate = other.rotate;
+        flip = other.flip;
+        return *this;
+    }
+};
+
+move_t get_move_tile(std::map<std::pair<ll, ll>, std::vector<border_t>> const& border_info) {
+    assert(border_info.size() > 0);
+
+    // std::for_each(std::cbegin(border_info), std::cend(border_info), [&](auto const& elem) {
+    //     std::cout << elem.first.first << "=" << elem.first.second << ": ";
+    //     std::for_each(std::cbegin(elem.second), std::cend(elem.second), [&](auto const& e) {
+    //         std::cout << "t1: " << e.type1 << ", t2: " << e.type2 << ", d: " << e.d << " _ ";
+    //     });
+    //     std::cout << std::endl;
+    // });
+
+    std::set<move_t> valids;
+    std::set<move_t> v;
+    for (auto const& bi : border_info) {
+        v.clear();
+
+        for (auto const& tbi : bi.second) {
+            if (static_cast<ll>(tbi.d) == tbi.type1) {
+                v.insert(move_t{});
+                continue;
+            }
+
+            if (tbi.type1 >= 4) {
+                v.insert(move_t{ (tbi.type1 - static_cast<ll>(tbi.d)) % 4, true });
+            } else {
+                v.insert(move_t{ (tbi.type1 + 4 - static_cast<ll>(tbi.d)) % 4, false });
+            }
+        }
+
+        if (valids.empty()) {
+            std::swap(valids, v);
+        } else {
+            auto vv = valids;
+            valids.clear();
+            std::set_intersection(std::cbegin(v),
+                                  std::cend(v),
+                                  std::cbegin(vv),
+                                  std::cend(vv),
+                                  std::inserter(valids, valids.end()));
+        }
+    }
+
+    assert(valids.size() == 1);
+    return *valids.cbegin();
+}
+
+void apply_correct_position(tile_t& tile, move_t const& move) {
+    if (move.flip) {
+        std::for_each(std::begin(tile), std::end(tile), [](auto& tr) {
+            std::reverse(std::begin(tr), std::end(tr));
+        });
+    }
+
+    if (move.rotate > 0) {
+        tile_t new_tile(tile.front().size(), std::string(tile.size(), ' '));
+        for (ll r = 1; r <= move.rotate; r++) {
+            for (ll i = 0; i < static_cast<ll>(tile.size()); i++) {
+                for (ll j = 0; j < static_cast<ll>(tile[i].size()); j++) {
+                    new_tile[static_cast<ll>(tile[i].size()) - 1 - j][i] = tile[i][j];
+                }
+            }
+            tile = new_tile;
+        }
+    }
+}
+
+void apply_rotation_flip(std::vector<std::vector<ll>> const& tile_matrix,
+                         std::unordered_map<ll, std::vector<std::pair<ll, ll>>> const& neighbors_info,
+                         std::unordered_map<ll, tile_t>& tiles_fix) {
+    std::map<std::pair<ll, ll>, std::vector<border_t>> border_info;
     auto const square = static_cast<ll>(tile_matrix.size());
     for (ll i = 0; i < square; i++) {
         for (ll j = 0; j < square; j++) {
@@ -279,7 +362,7 @@ void get_rotation_flip(std::vector<std::vector<ll>> const& tile_matrix,
                 auto const neighbor_tile_id = tile_matrix[x][y];
                 for (auto const& ni : neighbors_info) {
                     auto const it0 = std::find_if(std::cbegin(ni.second), std::cend(ni.second), [&](auto const& elem) {
-                        return tile_matrix[i][i] == elem.first;
+                        return tile_matrix[i][j] == elem.first;
                     });
                     auto const it1 = std::find_if(std::cbegin(ni.second), std::cend(ni.second), [&](auto const& elem) {
                         return neighbor_tile_id == elem.first;
@@ -289,13 +372,119 @@ void get_rotation_flip(std::vector<std::vector<ll>> const& tile_matrix,
                         continue;
                     }
 
-                    border_info.push_back(border_t{ it0->first, it1->first, it0->second, it1->second, d });
+                    auto const key = std::make_pair(it0->first, it1->first);
+                    border_info[key].push_back(border_t{ it0->second, it1->second, d });
                 }
             }
 
-            std::cout << "HERE" << std::endl;
+            auto const move = get_move_tile(border_info);
+            auto tile_it = tiles_fix.find(tile_matrix[i][j]);
+            assert(tile_it != std::cend(tiles_fix));
+            apply_correct_position(tile_it->second, move);
         }
     }
+}
+
+void print_matrix(input_t const& tile_data, std::vector<std::vector<ll>> const& tile_matrix) {
+    ll square = static_cast<ll>(tile_matrix.size());
+    ll tile_square = static_cast<ll>(tile_data.cbegin()->second.size());
+    for (ll i = 0; i < square; i++) {
+        for (ll r = 0; r < tile_square; r++) {
+            for (ll j = 0; j < square; j++) {
+                auto it = tile_data.find(tile_matrix[i][j]);
+                assert(it != std::cend(tile_data));
+                std::cout << it->second[r] << "  ";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << std::endl;
+    }
+}
+
+tile_t create_big_matrix(input_t const& tile_data, std::vector<std::vector<ll>> const& tile_matrix) {
+    ll const square = static_cast<ll>(tile_matrix.size());
+    ll const tile_square = static_cast<ll>(tile_data.cbegin()->second.size());
+    ll const size = square * (tile_square - 2);
+    tile_t big_matrix(size);
+    for (ll i = 0; i < square; i++) {
+        for (ll r = 1; r < tile_square - 1; r++) {
+            big_matrix[i * (tile_square - 2) + r - 1].reserve(size);
+            for (ll j = 0; j < square; j++) {
+                auto it = tile_data.find(tile_matrix[i][j]);
+                assert(it != std::cend(tile_data));
+                std::copy(std::cbegin(it->second[r]) + 1,
+                          std::cbegin(it->second[r]) + (it->second[r].size() - 1),
+                          std::back_inserter(big_matrix[i * (tile_square - 2) + r - 1]));
+            }
+        }
+    }
+    return big_matrix;
+}
+
+// clang-format off
+tile_t monsters = {"                  # ",
+                   "#    ##    ##    ###",
+                   " #  #  #  #  #  #   "};
+// clang-format on
+
+std::vector<std::pair<ll, ll>> get_points(tile_t const& m) {
+    std::vector<std::pair<ll, ll>> p;
+    for (ll i = 0; i < static_cast<ll>(m.size()); i++) {
+        for (ll j = 0; j < static_cast<ll>(m[i].size()); j++) {
+            if (m[i][j] == '#') {
+                p.emplace_back(i, j);
+            }
+        }
+    }
+    return p;
+}
+
+std::vector<std::vector<std::pair<ll, ll>>> get_moster_points(tile_t const& m) {
+    std::vector<std::vector<std::pair<ll, ll>>> result;
+    result.emplace_back(get_points(m));
+    auto mm = m;
+    for (ll r = 1; r < 4; r++) {
+        apply_correct_position(mm, move_t{ 1, false });
+        result.emplace_back(get_points(mm));
+    }
+    mm = m;
+    apply_correct_position(mm, move_t{ 0, true });
+    result.emplace_back(get_points(mm));
+    for (ll r = 1; r < 4; r++) {
+        apply_correct_position(mm, move_t{ 1, false });
+        result.emplace_back(get_points(mm));
+    }
+
+    return result;
+}
+
+tile_t mark_monsters(std::vector<std::vector<std::pair<ll, ll>>> const& monsters_search, tile_t const& big_matrix) {
+    tile_t big_matrix_marked = big_matrix;
+    for (auto const& ms : monsters_search) {
+        auto const mx = std::max_element(std::cbegin(ms), std::cend(ms), [](auto const& lhs, auto const& rhs) {
+            return lhs.first < rhs.first;
+        });
+        auto const my = std::max_element(std::cbegin(ms), std::cend(ms), [](auto const& lhs, auto const& rhs) {
+            return lhs.second < rhs.second;
+        });
+
+        ll square = static_cast<ll>(big_matrix.size());
+        for (ll i = 0; i < square - mx->first; i++) {
+            for (ll j = 0; j < square - my->second; j++) {
+                auto const monster_present = std::all_of(std::cbegin(ms), std::cend(ms), [&](auto const& elem) {
+                    return big_matrix[i + elem.first][j + elem.second] == '#';
+                });
+
+                if (monster_present) {
+                    std::for_each(std::cbegin(ms), std::cend(ms), [&](auto const& elem) {
+                        big_matrix_marked[i + elem.first][j + elem.second] = 'O';
+                    });
+                }
+            }
+        }
+    }
+
+    return big_matrix_marked;
 }
 
 result_t solve2(input_t const& input_data) {
@@ -310,7 +499,7 @@ result_t solve2(input_t const& input_data) {
     auto const square = static_cast<ll>(sqrt(input_data.size()));
     assert(input_data.size() == square * square);
 
-    std::cout << "Matrix size: " << square << "x" << square << std::endl;
+    // std::cout << "Matrix size: " << square << "x" << square << std::endl;
 
     std::sort(std::begin(border_inv_info), std::end(border_inv_info), [](auto const& lhs, auto const& rhs) {
         return std::tie(lhs.border, lhs.tile_id, lhs.type) < std::tie(rhs.border, rhs.tile_id, rhs.type);
@@ -360,13 +549,13 @@ result_t solve2(input_t const& input_data) {
     //     });
     //     std::cout << std::endl;
     // });
-    std::for_each(std::cbegin(tiles_neighbors_count), std::cend(tiles_neighbors_count), [&](auto const& elem) {
-        std::cout << elem.first << ": ";
-        std::for_each(std::cbegin(elem.second), std::cend(elem.second), [&](auto const& e) {
-            std::cout << e << ",";
-        });
-        std::cout << std::endl;
-    });
+    // std::for_each(std::cbegin(tiles_neighbors_count), std::cend(tiles_neighbors_count), [&](auto const& elem) {
+    //     std::cout << elem.first << ": ";
+    //     std::for_each(std::cbegin(elem.second), std::cend(elem.second), [&](auto const& e) {
+    //         std::cout << e << ",";
+    //     });
+    //     std::cout << std::endl;
+    // });
 
     std::vector<std::vector<ll>> tile_matrix(square, std::vector<ll>(square));
     auto inside_tiles_it = tiles_neighbors_count.find(4);
@@ -374,9 +563,37 @@ result_t solve2(input_t const& input_data) {
 
     fill_edges(tiles_neighbors_count, tiles_neighbors, tile_matrix);
     fill_inside(tiles_neighbors_count, tiles_neighbors, tile_matrix);
-    get_rotation_flip(tile_matrix, neighbors_info);
 
-    return -1;
+    // std::cout << "Matrix: " << std::endl;
+    // std::for_each(std::cbegin(tile_matrix), std::cend(tile_matrix), [&](auto const& elem) {
+    //     std::for_each(std::cbegin(elem), std::cend(elem), [&](auto const& e) {
+    //         std::cout << e << ",";
+    //     });
+    //     std::cout << std::endl;
+    // });
+
+    auto copy_tiles = input_data;
+    apply_rotation_flip(tile_matrix, neighbors_info, copy_tiles);
+
+    auto const big_matrix = create_big_matrix(copy_tiles, tile_matrix);
+    auto const mosters_search = get_moster_points(monsters);
+
+    auto const marked_matrix = mark_monsters(mosters_search, big_matrix);
+
+    result_t ans = std::accumulate(std::cbegin(marked_matrix),
+                                   std::cend(marked_matrix),
+                                   0ll,
+                                   [](auto const& base, auto const& elem) {
+                                       return base + std::count(std::cbegin(elem), std::cend(elem), '#');
+                                   });
+
+    // print_matrix(copy_tiles, tile_matrix);
+    // std::for_each(std::cbegin(marked_matrix), std::cend(marked_matrix), [&](auto const& elem) {
+    //     std::cout << elem << std::endl;
+    // });
+    // std::cout << std::endl;
+
+    return ans;
 }
 
 int main() {
