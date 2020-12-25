@@ -4,3 +4,6 @@ main
 Day */
 Day *.html
 Day *.mhtml
+Leaderboard */
+Leaderboard *.html
+Leaderboard *.mhtml
